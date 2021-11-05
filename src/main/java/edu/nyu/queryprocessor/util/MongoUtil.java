@@ -18,19 +18,27 @@ public class MongoUtil {
     private String connection_string = new ConfigUtil().getConfig("connection_string");
     private String username = new ConfigUtil().getConfig("username");
     private String pwd = new ConfigUtil().getConfig("pwd");
+    private MongoClient mongoClient;
+    private MongoCollection<Document> mongoCollection;
 
     public MongoUtil() throws IOException {
     }
 
-    public MongoCollection<Document> getConnection(String databaseName, String collecionName) {
-        List<MongoCredential> credentials = new ArrayList<MongoCredential>();
-        credentials.add(MongoCredential.createScramSha1Credential(username,
-                databaseName, pwd.toCharArray()));
+    public MongoUtil(String databaseName, String collectionName) throws IOException {
+        mongoClient = getClient(databaseName);
+        mongoCollection = getConnection(mongoClient, collectionName);
+    }
 
-        MongoClientURI connectionUrl = new MongoClientURI(connection_string + databaseName + "?maxIdleTimeMS=3600000");
+    public MongoClient getClient(String databaseName) {
+        List<MongoCredential> credentials = new ArrayList<MongoCredential>();
+
+        MongoClientURI connectionUrl = new MongoClientURI(connection_string + databaseName + "?maxIdleTimeMS=3600000&authSource="+databaseName);
         MongoClient mongoClient = new MongoClient(connectionUrl);
-        MongoCollection<Document> collection = mongoClient.getDatabase(collecionName).getCollection(collecionName);
-        return collection;
+        return mongoClient;
+    }
+
+    public MongoCollection<Document> getConnection(MongoClient mongoClient, String collecionName) {
+        return mongoClient.getDatabase(collecionName).getCollection(collecionName);
     }
 
     public boolean insertOne(MongoCollection<Document> collection, Document doc) {
@@ -63,6 +71,12 @@ public class MongoUtil {
 
     public String findSingleDocWithFilter(MongoCollection<Document> collection, BsonDocument filter) {
         return collection.find(filter).first().toJson();
+    }
+
+    public String findSingleDocWithFilter( Document filter) {
+         String res = mongoCollection.find(filter).first().toJson();
+         mongoClient.close();
+        return res;
     }
 
     public MongoCursor<Document> find(MongoCollection<Document> collection, BsonDocument filter) {
