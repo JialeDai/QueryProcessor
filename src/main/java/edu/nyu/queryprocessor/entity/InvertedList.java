@@ -5,6 +5,7 @@ import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
 import edu.nyu.queryprocessor.util.ConfigUtil;
 import edu.nyu.queryprocessor.util.MongoUtil;
+import edu.nyu.queryprocessor.util.Vbyte;
 import lombok.Data;
 import org.bson.BsonDocument;
 import org.bson.Document;
@@ -40,6 +41,8 @@ public class InvertedList {
         for (int i = 0; i < test.length; i++) {
             System.out.println(test[i]);
         }
+        List<Long> decodedTest = Vbyte.decode(test);
+        System.out.println(decodedTest);
         return null;
     }
 
