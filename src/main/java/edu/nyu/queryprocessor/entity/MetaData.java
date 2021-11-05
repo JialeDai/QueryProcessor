@@ -1,5 +1,6 @@
 package edu.nyu.queryprocessor.entity;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.io.File;
@@ -11,9 +12,14 @@ import java.io.RandomAccessFile;
  * @author jiale
  */
 @Data
+@AllArgsConstructor
 public class MetaData {
     private byte[] bytes;
-    private int[] values;
+    private long[] values;
+
+    public MetaData(long[] values) {
+        this.values = values;
+    }
 
     public byte[] getMetaDataFromIndexFile(File indexFile, long fileOffset, long metaDataLength) throws IOException {
         RandomAccessFile randomAccessFile = new RandomAccessFile(indexFile,"r");

@@ -6,5 +6,5 @@ import lombok.Data;
 public class Block {
     private int length;
     private byte[] bytes;
-    private int[] content;
+    private long[] content;
 }

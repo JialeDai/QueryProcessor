@@ -8,7 +8,14 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class InvertedListTest {
     @Test
-    void openList() throws IOException {
-        new InvertedList().openList(new Term("aa"));
+    void openListTest() throws IOException {
+        InvertedList invertedList = new InvertedList().openList(new Term("aa"));
+        System.out.println(invertedList);
+    }
+
+    @Test
+    void nextGEQTest() throws IOException {
+        InvertedList invertedList = new InvertedList().openList(new Term ("aa"));
+        System.out.println(invertedList.nextGEQ(invertedList, 1));
     }
 }

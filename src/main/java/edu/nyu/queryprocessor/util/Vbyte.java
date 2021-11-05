@@ -49,21 +49,26 @@ public class Vbyte {
 
         while (true) {
             while ((readbyte & 0x80) == 0) {
-                if (shift >= 50) { // We read more bytes than required to load the max long
+                // We read more bytes than required to load the max long
+                if (shift >= 50) {
                     throw new IllegalArgumentException();
                 }
-                System.out.println(readbyte);
+//                System.out.println(readbyte);
                 out |= (readbyte & 127) << shift;
 
                 readbyte = in.read();
-                if (readbyte == -1) throw new EOFException();
+                if (readbyte == -1) {
+                    throw new EOFException();
+                }
 
                 shift += 7;
             }
             out |= (readbyte & 127) << shift;
-            System.out.println(out);
+//            System.out.println(out);
             list.add(out);
-            if (in.getFilePointer() - fileOffset >= length) break;
+            if (in.getFilePointer() - fileOffset >= length) {
+                break;
+            }
             while (in.getFilePointer() - fileOffset < length && (readbyte = in.read()) == -1) {
             }
             shift = 0;
