@@ -5,6 +5,6 @@ public class BM25 extends Score{
 
     @Override
     public int compareTo(Object o) {
-        return this.getVal().compareTo(((Score)o).getVal());
+        return ((Score)o).getVal().compareTo(this.getVal());
     }
 }

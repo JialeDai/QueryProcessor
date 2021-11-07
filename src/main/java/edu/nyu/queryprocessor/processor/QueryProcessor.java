@@ -1,9 +1,9 @@
 package edu.nyu.queryprocessor.processor;
 
-import edu.nyu.queryprocessor.entity.InvertedList;
-import edu.nyu.queryprocessor.entity.Query;
-import edu.nyu.queryprocessor.entity.Result;
-import edu.nyu.queryprocessor.entity.Term;
+import edu.nyu.queryprocessor.entity.*;
+
+import java.io.IOException;
+import java.util.List;
 
 public abstract class QueryProcessor {
     /**
@@ -11,5 +11,5 @@ public abstract class QueryProcessor {
      * @param query
      * @return
      */
-    abstract Result process(Query query);
+    abstract List<Document> process(Query query) throws IOException;
 }

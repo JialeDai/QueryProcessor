@@ -16,6 +16,6 @@ class InvertedListTest {
     @Test
     void nextGEQTest() throws IOException {
         InvertedList invertedList = new InvertedList().openList(new Term ("aa"));
-        System.out.println(invertedList.nextGEQ(invertedList, 1));
+        System.out.println(invertedList.nextGEQ(invertedList, 1l));
     }
 }

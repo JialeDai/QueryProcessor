@@ -1,10 +1,15 @@
 package edu.nyu.queryprocessor.entity;
 
-import java.util.Comparator;
-import java.util.PriorityQueue;
+import lombok.Data;
 
+import java.util.*;
+
+/**
+ * @author jiale
+ */
 public class Result {
-    private static PriorityQueue<Document> res = new PriorityQueue<>(new Comparator<Document>() {
+    public static Set<Term> missMatchSet = new HashSet<>();
+    private static PriorityQueue<Document> rankList = new PriorityQueue<>(new Comparator<Document>() {
         @Override
         public int compare(Document o1, Document o2) {
             return o1.getScore().compareTo(o2.getScore());
@@ -12,6 +17,19 @@ public class Result {
     });
 
     public static void addDoc(Document document) {
-        res.offer(document);
+        rankList.offer(document);
     }
+
+    public static List<Document> getTopN(int n) {
+        List<Document> documents = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            documents.add(rankList.poll());
+        }
+        return documents;
+    }
+
+    public static void addMissMatch(Term term) {
+        missMatchSet.add(term);
+    }
+
 }

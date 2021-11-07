@@ -32,13 +32,13 @@ public class MongoUtil {
     public MongoClient getClient(String databaseName) {
         List<MongoCredential> credentials = new ArrayList<MongoCredential>();
 
-        MongoClientURI connectionUrl = new MongoClientURI(connection_string + databaseName + "?maxIdleTimeMS=3600000&authSource="+databaseName);
+        MongoClientURI connectionUrl = new MongoClientURI(connection_string + databaseName + "?maxIdleTimeMS=60000&authSource=" + databaseName);
         MongoClient mongoClient = new MongoClient(connectionUrl);
         return mongoClient;
     }
 
-    public MongoCollection<Document> getConnection(MongoClient mongoClient, String collecionName) {
-        return mongoClient.getDatabase(collecionName).getCollection(collecionName);
+    public MongoCollection<Document> getConnection(MongoClient mongoClient, String collectionName) {
+        return mongoClient.getDatabase(collectionName).getCollection(collectionName);
     }
 
     public boolean insertOne(MongoCollection<Document> collection, Document doc) {
@@ -73,10 +73,22 @@ public class MongoUtil {
         return collection.find(filter).first().toJson();
     }
 
-    public String findSingleDocWithFilter( Document filter) {
-         String res = mongoCollection.find(filter).first().toJson();
-         mongoClient.close();
-        return res;
+    public String findSingleDocWithFilter(Document filter) {
+        MongoCursor<Document> res = null;
+        try {
+            res = mongoCollection.find(filter).iterator();
+            if (res.hasNext()) {
+                return res.next().toJson();
+            } else {
+                return null;
+            }
+//             res = mongoCollection.find(filter).first().toJson();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            mongoClient.close();
+            return null;
+        }
     }
 
     public MongoCursor<Document> find(MongoCollection<Document> collection, BsonDocument filter) {

@@ -1,6 +1,7 @@
 package edu.nyu.queryprocessor.entity;
 
 import com.alibaba.fastjson.JSON;
+import com.google.common.collect.Lists;
 import edu.nyu.queryprocessor.util.ConfigUtil;
 import edu.nyu.queryprocessor.util.MongoUtil;
 import edu.nyu.queryprocessor.util.Vbyte;
@@ -18,6 +19,7 @@ import java.util.List;
  */
 @Data
 public class InvertedList {
+    private Term term;
     private MetaData metaData;
     private List<Block> blocks;
     private String indexFileUrl;
@@ -25,6 +27,8 @@ public class InvertedList {
     private long fileOffset;
     private long metadataLength;
     private long listLength;
+    private long freq;
+    private long blockOffset;
 
     public InvertedList() throws IOException {
         indexFileUrl = new ConfigUtil().getConfig("index_file_url");
@@ -38,24 +42,28 @@ public class InvertedList {
      * @param term
      */
     public InvertedList openList(Term term) throws IOException {
+        this.term = term;
         Document filter = new Document().append("term", term.getContent());
         Lexicon lexicon = JSON.parseObject(new MongoUtil("admin", "lexicon").findSingleDocWithFilter(filter), Lexicon.class);
-//        System.out.println(lexicon);
+        if (lexicon == null) {
+            Result.addMissMatch(term);
+            return null;
+        }
+        System.out.println(lexicon);
         fileOffset = lexicon.getFileOffset();
         metadataLength = lexicon.getMetadataLength();
         listLength = lexicon.getListLength();
         List<Long> metaData = Vbyte.decode(randomAccessFile, fileOffset, metadataLength);
-//        System.out.println(metaData);
+        blockOffset = fileOffset + metadataLength;
+        System.out.println(metaData);
         this.metaData = new MetaData(ArrayUtils.toPrimitive(metaData.toArray(new Long[metaData.size()])));
         return this;
     }
 
     /**
      * close the inverted list for reading
-     *
-     * @param lp
      */
-    public void closeList(InvertedList lp) throws IOException {
+    public void closeList() throws IOException {
         this.randomAccessFile.close();
     }
 
@@ -75,35 +83,54 @@ public class InvertedList {
      * @param docID
      * @return
      */
-    public long nextGEQ(InvertedList lp, Integer docID) throws IOException {
+    public long nextGEQ(InvertedList lp, Long docID) throws IOException {
+        blockOffset = fileOffset + metadataLength;
         List<Long> decompressedBlock = null;
         MetaData metaData = lp.getMetaData();
         long[] metaDataValue = metaData.getValues();
         long curLastDid = -1;
-        long blockOffset = fileOffset;
+//        long blockOffset = fileOffset;
         int i = 0;
+        long initialDid = 0;
         while (i < metaDataValue.length) {
             curLastDid = metaDataValue[i];
+            if (i >= 2) {
+                initialDid = metaDataValue[i - 2];
+            }
             if (docID <= curLastDid) {
-                decompressedBlock = Vbyte.decode(randomAccessFile, blockOffset, metaDataValue[i + 1]);
+                decompressedBlock = decompressBlock(randomAccessFile, blockOffset, metaDataValue[i + 1], initialDid);
+                System.out.println("decompressedBlock:"+" "+ decompressedBlock.size() + " "+lp.getTerm()+ " " + blockOffset + " " + metaDataValue[i + 1] + decompressedBlock); // todo 查blockOffset
+                break;
             }
             blockOffset += metaDataValue[i + 1];
             i += 2;
         }
-        List<Long> docIdBlock = decompressedBlock.subList(0, decompressedBlock.size()/2);
-        List<Long> freqBlock = decompressedBlock.subList(decompressedBlock.size()/2, decompressedBlock.size());
-        return binarySearch(docIdBlock, docID);
+        // did is larger than any did in the inverted
+        if (decompressedBlock == null) {
+            return 3213835+1; // todo config
+        }
+        List<List<Long>> partitions = Lists.partition(decompressedBlock,decompressedBlock.size()/2);
+        List<Long> docIdBlock = partitions.get(0);
+        List<Long> freqBlock = partitions.get(1);
+        long nextGEQDId = binarySearch(docIdBlock, docID);
+        System.out.println("search in block: key-" + docID+" return- "+ nextGEQDId + " block-" + docIdBlock);
+        System.out.println("docIdBlock: "+docIdBlock.size()+docIdBlock);
+        System.out.println("freqBlock: "+freqBlock.size()+freqBlock);
+        long idx = docIdBlock.indexOf(nextGEQDId);
+        System.out.println(nextGEQDId+" "+idx);
+        freq = freqBlock.get((int) idx);
+        return nextGEQDId;
     }
 
     /**
-     * get all frequencies
+     * get frequency based on the given document id
      *
      * @param lp
      * @param did
      * @return
      */
-    public List<Integer> getFreq(InvertedList lp, int did) {
-        return null;
+    public Long getFreq(InvertedList lp, long did) {
+        return freq;
     }
 
     /**
@@ -115,25 +142,45 @@ public class InvertedList {
      * @return
      */
     private long binarySearch(List<Long> block, long did) {
-        int left = 0;
-        int right = block.size() - 1;
-        int mid = -1;
-        while (left+1 < right) {
-            mid = left + (right - left) / 2;
-            if  (block.get(mid) == did) {
-                return block.get(mid);
-            } else if (block.get(mid) < did) {
-                right = mid;
-            } else if (block.get(mid) > did){
-                left = mid;
+//        int left = 0;
+//        int right = block.size() - 1;
+//        int mid = -1;
+//        while (left + 1 < right) {
+//            mid = left + (right - left) / 2;
+//            if (block.get(mid) == did) {
+//                return block.get(mid);
+//            } else if (block.get(mid) < did) {
+//                right = mid;
+//            } else if (block.get(mid) > did) {
+//                left = mid;
+//            }
+//        }
+//        if (block.get(left) >= did) {
+//            return block.get(left);
+//        }
+//        if (block.get(right) >= did) {
+//            return block.get(right);
+//        }
+//        return -1;
+        for (int i = 0; i < block.size(); i++) {
+            if (block.get(i) >= did) {
+                return block.get(i);
             }
         }
-        if (block.get(left) >= did) {
-            return block.get(left);
+        return 3213835+1;
+    }
+
+    private List<Long> decompressBlock(RandomAccessFile lp, long blockOffset, long blockLength, long initialDid) throws IOException {
+        List<Long> block = Vbyte.decode(randomAccessFile, blockOffset, blockLength);
+
+        for (int i = 0; i < block.size() / 2; i++) {
+            if (i == 0) {
+                block.set(i, block.get(i) + initialDid);
+            }
+            if (i != 0) {
+                block.set(i, block.get(i - 1) + block.get(i));
+            }
         }
-        if (block.get(right) >= did) {
-            return block.get(right);
-        }
-        return -1;
+        return block;
     }
 }

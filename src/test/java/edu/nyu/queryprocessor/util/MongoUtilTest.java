@@ -15,8 +15,8 @@ class MongoUtilTest {
         MongoClient mongoClient = null;
         try {
             mongoClient = new MongoUtil().getClient("admin");
-            MongoCollection<Document> collection = new MongoUtil().getConnection(mongoClient, "lexicon");
-            Document doc = new Document("name", "MongoDB")
+            MongoCollection<Document> collection = new MongoUtil().getConnection(mongoClient, "test");
+            Document doc = new Document("name", "mlgb")
                     .append("type", "database")
                     .append("count", 1)
                     .append("info", new Document("x", 203).append("y", 102));

@@ -1,9 +1,14 @@
 package edu.nyu.queryprocessor.entity;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
+/**
+ * @author jiale
+ */
 @Data
+@AllArgsConstructor
 public class Document {
-    private int did;
+    private long did;
     private Score score;
 }
