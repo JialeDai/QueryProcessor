@@ -1,7 +1,9 @@
 package edu.nyu.queryprocessor.util;
 
+import com.alibaba.fastjson.JSON;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
+import edu.nyu.queryprocessor.entity.Lexicon;
 import org.bson.Document;
 import org.junit.jupiter.api.Test;
 
@@ -41,5 +43,12 @@ class MongoUtilTest {
         } finally {
             mongoClient.close();
         }
+    }
+
+    @Test
+    void findSingleDocWithFilterTest() throws IOException {
+        Document filter = new Document().append("term", "aa");
+        Lexicon lexicon = JSON.parseObject(new MongoUtil("admin", "lexicon").findSingleDocWithFilter(filter), Lexicon.class);
+        System.out.println(lexicon);
     }
 }
