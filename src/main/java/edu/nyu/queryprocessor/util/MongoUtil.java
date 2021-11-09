@@ -6,6 +6,7 @@ import com.mongodb.MongoCredential;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
+import lombok.Data;
 import org.bson.BsonDocument;
 import org.bson.Document;
 
@@ -14,6 +15,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+@Data
 public class MongoUtil {
     private String connection_string = new ConfigUtil().getConfig("connection_string");
     private String username = new ConfigUtil().getConfig("username");

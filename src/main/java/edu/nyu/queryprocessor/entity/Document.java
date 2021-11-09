@@ -11,4 +11,5 @@ import lombok.Data;
 public class Document {
     private long did;
     private Score score;
+    private Page page;
 }

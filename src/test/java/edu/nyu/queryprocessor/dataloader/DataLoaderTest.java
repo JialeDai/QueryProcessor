@@ -16,4 +16,9 @@ class DataLoaderTest {
     void loadPageTable() throws IOException {
         new DataLoader().loadPageTable();
     }
+
+    @Test
+    void loadIdfMapTest() throws IOException {
+        new DataLoader().loadDocFreqMap();
+    }
 }

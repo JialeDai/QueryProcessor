@@ -1,22 +1,74 @@
 package edu.nyu.queryprocessor.dataloader;
 
+import com.alibaba.fastjson.JSON;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.Filters;
+import edu.nyu.queryprocessor.entity.Page;
 import edu.nyu.queryprocessor.util.ConfigUtil;
 import edu.nyu.queryprocessor.util.DocParserUtil;
 import edu.nyu.queryprocessor.util.MongoUtil;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.regex.Pattern;
+
+import static org.apache.commons.lang.CharSetUtils.count;
 
 public class DataLoader {
     @SuppressWarnings("deprecation")
+
+    public void loadDocFreqMap() throws IOException {
+        BufferedReader inputStream = null;
+        Map<String, Integer> docFreqMap = new HashMap<>();
+        MongoClient queryProcessorMongoClient = null;
+        Integer bufferSize = Integer.parseInt(new ConfigUtil().getConfig("insert_buffer_size"));
+        try {
+            queryProcessorMongoClient = new MongoUtil().getClient("admin");
+            MongoCollection<Document> docFreqCollection = new MongoUtil().getConnection(queryProcessorMongoClient, "docFreq");
+            String asciiIndexUrl = new ConfigUtil().getConfig("ascii_index_url");
+            inputStream = new BufferedReader(new InputStreamReader(new FileInputStream(new File(asciiIndexUrl))), 10 * 1024 * 1024);
+            List<Document> buffer = new ArrayList<>();
+            while (inputStream.ready()) {
+                if (buffer.size() >= bufferSize) {
+                    docFreqCollection.insertMany(buffer);
+                    System.out.println("insert into mongodb...");
+                    buffer.clear();
+                }
+                String line = inputStream.readLine();
+                Document doc = convertDocFreq(line);
+                if (doc != null) {
+                    buffer.add(doc);
+                }
+            }
+            if (!buffer.isEmpty()) {
+                docFreqCollection.insertMany(buffer);
+                buffer = null;
+            }
+        } finally {
+            inputStream.close();
+            queryProcessorMongoClient.close();
+        }
+    }
+
+    private Document convertDocFreq(String line) {
+        String[] terms = line.split(":");
+        if (terms.length == 1) {
+            return null;
+        }
+        String term = terms[0];
+        Integer docFreq = terms[1].split(",").length;
+        System.out.println(term +":"+docFreq);
+        return new Document().append("term", term).append("docFreq", docFreq);
+    }
+
     public void loadLexicon() throws IOException {
         Integer bufferSize = Integer.parseInt(new ConfigUtil().getConfig("insert_buffer_size"));
         MongoClient queryProcessorMongoClient = new MongoUtil().getClient("admin");
-        MongoCollection<Document> addLexiconCollection = new MongoUtil().getConnection(queryProcessorMongoClient,"lexicon");
+        MongoCollection<Document> addLexiconCollection = new MongoUtil().getConnection(queryProcessorMongoClient, "lexicon");
         String lexiconUrl = new ConfigUtil().getConfig("lexicon_url");
         BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(new File(lexiconUrl))), 10 * 1024 * 1024);
         List<Document> buffer = new ArrayList<>();
@@ -55,7 +107,7 @@ public class DataLoader {
     public void loadPageTable() throws IOException {
         Integer bufferSize = Integer.parseInt(new ConfigUtil().getConfig("insert_buffer_size"));
         MongoClient queryProcessorMongoClient = new MongoUtil().getClient("admin");
-        MongoCollection<Document> addLPageTableCollection = new MongoUtil().getConnection(queryProcessorMongoClient,"pageTable");
+        MongoCollection<Document> addLPageTableCollection = new MongoUtil().getConnection(queryProcessorMongoClient, "pageTable");
         try {
             Set<String> blackList = new HashSet<>();
             blackList.add("<DOC>");
@@ -87,7 +139,7 @@ public class DataLoader {
                     try {
                         if (pageTableBuffer.size() >= bufferSize) {
                             addLPageTableCollection.insertMany(pageTableBuffer);
-                            System.out.println("inserting..."+docId);
+                            System.out.println("inserting..." + docId);
                             pageTableBuffer.clear();
                         }
                         Document doc = new Document()

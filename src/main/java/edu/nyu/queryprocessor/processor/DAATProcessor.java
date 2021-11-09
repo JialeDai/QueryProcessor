@@ -49,9 +49,9 @@ public class DAATProcessor extends QueryProcessor{
                         freqList.add(lp.get(i).getFreq(lp.get(i), did));
                     }
                     // TODO compute BM25 score from frequencies and other data
-                    Score score = new BM25();
-                    score.setVal(new Random().nextDouble());
-                    Document interaction = new Document(did, score);
+                    Score score = new BM25(1.2, 0.75);
+//                    score.setVal(score.;);
+                    Document interaction = new Document(did, score, null);
                     Result.addDoc(interaction);
                     System.out.println("find intersection: "+ interaction);
                     // and increase did to search for next post
