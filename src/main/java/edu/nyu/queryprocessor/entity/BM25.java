@@ -44,6 +44,15 @@ public class BM25 extends Score {
         this.b = b;
     }
 
+    public double cal(List<Term> termList, Long did) throws IOException {
+        double sum = 0;
+        for (Term each : termList) {
+            String keyword = each.getContent();
+            sum += cal(keyword, did);
+        }
+        return did;
+    }
+
     /**
      * @param idf
      * @param tf
@@ -59,6 +68,9 @@ public class BM25 extends Score {
     public double cal(String keyword, Long did) throws IOException {
         MongoClient pageTableClient = null;
         MongoClient docFreqClient = null;
+        if (did == null) {
+            return 0.0d;
+        }
         try {
             Document filter = new Document().append("docId", did);
             MongoUtil pageTableMongoUtil = new MongoUtil("admin", "pageTable");
