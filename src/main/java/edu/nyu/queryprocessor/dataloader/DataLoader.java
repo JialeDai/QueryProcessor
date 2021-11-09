@@ -4,10 +4,13 @@ import com.alibaba.fastjson.JSON;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
+import edu.nyu.queryprocessor.entity.DocFreq;
 import edu.nyu.queryprocessor.entity.Page;
+import edu.nyu.queryprocessor.singleton.DocFreqCollection;
+import edu.nyu.queryprocessor.singleton.LexiconCollection;
+import edu.nyu.queryprocessor.singleton.PageTableCollection;
 import edu.nyu.queryprocessor.util.ConfigUtil;
 import edu.nyu.queryprocessor.util.DocParserUtil;
-import edu.nyu.queryprocessor.util.MongoUtil;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 
@@ -27,8 +30,8 @@ public class DataLoader {
         MongoClient queryProcessorMongoClient = null;
         Integer bufferSize = Integer.parseInt(new ConfigUtil().getConfig("insert_buffer_size"));
         try {
-            queryProcessorMongoClient = new MongoUtil().getClient("admin");
-            MongoCollection<Document> docFreqCollection = new MongoUtil().getConnection(queryProcessorMongoClient, "docFreq");
+//            queryProcessorMongoClient = new MongoUtil().getClient("admin");
+            MongoCollection<Document> docFreqCollection = DocFreqCollection.getInstance().getMongoCollection();
             String asciiIndexUrl = new ConfigUtil().getConfig("ascii_index_url");
             inputStream = new BufferedReader(new InputStreamReader(new FileInputStream(new File(asciiIndexUrl))), 10 * 1024 * 1024);
             List<Document> buffer = new ArrayList<>();
@@ -67,8 +70,9 @@ public class DataLoader {
 
     public void loadLexicon() throws IOException {
         Integer bufferSize = Integer.parseInt(new ConfigUtil().getConfig("insert_buffer_size"));
-        MongoClient queryProcessorMongoClient = new MongoUtil().getClient("admin");
-        MongoCollection<Document> addLexiconCollection = new MongoUtil().getConnection(queryProcessorMongoClient, "lexicon");
+//        MongoClient queryProcessorMongoClient = new MongoUtil().getClient("admin");
+//        MongoCollection<Document> addLexiconCollection = new MongoUtil().getConnection(queryProcessorMongoClient, "lexicon");
+        MongoCollection<Document> addLexiconCollection = LexiconCollection.getInstance().getMongoCollection();
         String lexiconUrl = new ConfigUtil().getConfig("lexicon_url");
         BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(new File(lexiconUrl))), 10 * 1024 * 1024);
         List<Document> buffer = new ArrayList<>();
@@ -87,7 +91,7 @@ public class DataLoader {
             addLexiconCollection.insertMany(buffer);
             buffer = null;
         }
-        queryProcessorMongoClient.close();
+//        queryProcessorMongoClient.close();
     }
 
     private Document convertLexicon(String line) {
@@ -106,8 +110,9 @@ public class DataLoader {
 
     public void loadPageTable() throws IOException {
         Integer bufferSize = Integer.parseInt(new ConfigUtil().getConfig("insert_buffer_size"));
-        MongoClient queryProcessorMongoClient = new MongoUtil().getClient("admin");
-        MongoCollection<Document> addLPageTableCollection = new MongoUtil().getConnection(queryProcessorMongoClient, "pageTable");
+//        MongoClient queryProcessorMongoClient = new MongoUtil().getClient("admin");
+//        MongoCollection<Document> addLPageTableCollection = new MongoUtil().getConnection(queryProcessorMongoClient, "pageTable");
+        MongoCollection<Document> addLPageTableCollection = PageTableCollection.getInstance().getMongoCollection();
         try {
             Set<String> blackList = new HashSet<>();
             blackList.add("<DOC>");
@@ -166,7 +171,7 @@ public class DataLoader {
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
-            queryProcessorMongoClient.close();
+//            queryProcessorMongoClient.close();
         }
     }
 }

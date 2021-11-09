@@ -1,10 +1,9 @@
 package edu.nyu.queryprocessor.dataloader;
 
+import edu.nyu.queryprocessor.dataloader.DataLoader;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class DataLoaderTest {
     @Test

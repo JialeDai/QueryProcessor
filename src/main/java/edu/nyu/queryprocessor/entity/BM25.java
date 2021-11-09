@@ -10,9 +10,11 @@ import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Filters;
 
 import com.sun.tools.javac.util.StringUtils;
+import edu.nyu.queryprocessor.cache.Cache;
+import edu.nyu.queryprocessor.singleton.DocFreqCollection;
+import edu.nyu.queryprocessor.singleton.PageTableCollection;
 import edu.nyu.queryprocessor.util.ConfigUtil;
 import edu.nyu.queryprocessor.util.DocParserUtil;
-import edu.nyu.queryprocessor.util.MongoUtil;
 import org.bson.BSON;
 import org.bson.Document;
 import org.bson.conversions.Bson;
@@ -46,11 +48,32 @@ public class BM25 extends Score {
 
     public double cal(List<Term> termList, Long did) throws IOException {
         double sum = 0;
-        for (Term each : termList) {
-            String keyword = each.getContent();
-            sum += cal(keyword, did);
+        double idf = 0;
+        try {
+            for (Term each : termList) {
+                String keyword = each.getContent();
+                if (Cache.cache.containsKey(keyword)) {
+                    idf = Cache.cache.get(keyword);
+                } else {
+                    Document docFreqFilter = new Document().append("term", keyword);
+                    DocFreq docFreq = JSON.parseObject(DocFreqCollection.getInstance().getMongoCollection().find(docFreqFilter).first().toJson(), DocFreq.class);
+                    idf = Math.log(3213835 / docFreq.getDocFreq());
+                    Cache.cache.put(keyword, idf);
+                }
+                Document filter = new Document().append("docId", did);
+                MongoCollection<Document> pateTableCollection = PageTableCollection.getInstance().getMongoCollection();
+                Page page = JSON.parseObject(pateTableCollection.find(filter).first().toJson(), Page.class);
+                Double tf = (double) count(page.getDoc(), keyword) * keyword.length() / page.getDoc().length();
+                double avgLength = Double.parseDouble(new ConfigUtil().getConfig("avg_length"));
+                Double L = page.getDoc().length() / avgLength;
+                sum += cal(idf, tf, L);
+                return sum;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new Random().nextDouble();
         }
-        return did;
+        return new Random().nextDouble();
     }
 
     /**
@@ -66,27 +89,20 @@ public class BM25 extends Score {
     }
 
     public double cal(String keyword, Long did) throws IOException {
-        MongoClient pageTableClient = null;
-        MongoClient docFreqClient = null;
         if (did == null) {
             return 0.0d;
         }
         try {
             Document filter = new Document().append("docId", did);
-            MongoUtil pageTableMongoUtil = new MongoUtil("admin", "pageTable");
-            pageTableClient = pageTableMongoUtil.getMongoClient();
-            MongoCollection<Document> pageTableCollection = pageTableMongoUtil.getMongoCollection();
-            Page page = JSON.parseObject(pageTableCollection.find(filter).first().toJson(), Page.class);
-            System.out.println(page);
+            MongoCollection<Document> pateTableCollection = PageTableCollection.getInstance().getMongoCollection();
+            Page page = JSON.parseObject(pateTableCollection.find(filter).first().toJson(), Page.class);
+//            System.out.println(page);
             Double tf = (double) count(page.getDoc(), keyword) * keyword.length() / page.getDoc().length();
             System.out.println("tf: " + tf);
             Document docFreqFilter = new Document().append("term", keyword);
-            MongoUtil docFreqMongoUtil = new MongoUtil("admin", "docFreq");
-            docFreqClient = docFreqMongoUtil.getMongoClient();
-            MongoCollection<Document> docFreqCollection = docFreqMongoUtil.getMongoCollection();
-            DocFreq docFreq = JSON.parseObject(docFreqCollection.find(docFreqFilter).first().toJson(), DocFreq.class);
+            DocFreq docFreq = JSON.parseObject(DocFreqCollection.getInstance().getMongoCollection().find(docFreqFilter).first().toJson(), DocFreq.class);
             double val = Math.log(3213835 / docFreq.getDocFreq());
-            Double idf = val == 0 ? 1.0d : val;
+            Double idf = val;
             System.out.println("idf: " + idf);
             double avgLength = Double.parseDouble(new ConfigUtil().getConfig("avg_length"));
             Double L = page.getDoc().length() / avgLength;
@@ -94,9 +110,6 @@ public class BM25 extends Score {
         } catch (Exception e) {
             e.printStackTrace();
             return 0.0d;
-        } finally {
-            pageTableClient.close();
-            docFreqClient.close();
         }
     }
 

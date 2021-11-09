@@ -2,8 +2,8 @@ package edu.nyu.queryprocessor.entity;
 
 import com.alibaba.fastjson.JSON;
 import com.google.common.collect.Lists;
+import edu.nyu.queryprocessor.singleton.LexiconCollection;
 import edu.nyu.queryprocessor.util.ConfigUtil;
-import edu.nyu.queryprocessor.util.MongoUtil;
 import edu.nyu.queryprocessor.util.Vbyte;
 import lombok.Data;
 import org.apache.commons.lang.ArrayUtils;
@@ -12,6 +12,7 @@ import org.bson.Document;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -42,22 +43,23 @@ public class InvertedList {
      * @param term
      */
     public InvertedList openList(Term term) throws IOException {
-        this.term = term;
-        Document filter = new Document().append("term", term.getContent());
-        Lexicon lexicon = JSON.parseObject(new MongoUtil("admin", "lexicon").findSingleDocWithFilter(filter), Lexicon.class);
-        if (lexicon == null) {
+        try {
+            this.term = term;
+            Document filter = new Document().append("term", term.getContent());
+            Lexicon lexicon = JSON.parseObject(LexiconCollection.getInstance().findSingleDocWithFilter(filter), Lexicon.class);
+            System.out.println(lexicon);
+            fileOffset = lexicon.getFileOffset();
+            metadataLength = lexicon.getMetadataLength();
+            listLength = lexicon.getListLength();
+            List<Long> metaData = Vbyte.decode(randomAccessFile, fileOffset, metadataLength);
+            blockOffset = fileOffset + metadataLength;
+            System.out.println(metaData);
+            this.metaData = new MetaData(ArrayUtils.toPrimitive(metaData.toArray(new Long[metaData.size()])));
+            return this;
+        } catch (Exception e) {
             Result.addMissMatch(term);
             return null;
         }
-        System.out.println(lexicon);
-        fileOffset = lexicon.getFileOffset();
-        metadataLength = lexicon.getMetadataLength();
-        listLength = lexicon.getListLength();
-        List<Long> metaData = Vbyte.decode(randomAccessFile, fileOffset, metadataLength);
-        blockOffset = fileOffset + metadataLength;
-        System.out.println(metaData);
-        this.metaData = new MetaData(ArrayUtils.toPrimitive(metaData.toArray(new Long[metaData.size()])));
-        return this;
     }
 
     /**
@@ -115,6 +117,15 @@ public class InvertedList {
         long nextGEQDId = binarySearch(docIdBlock, docID);
         System.out.println("search in block: key-" + docID+" return- "+ nextGEQDId + " block-" + docIdBlock);
         System.out.println("docIdBlock: "+docIdBlock.size()+docIdBlock);
+        for (Long did: docIdBlock) {
+            BM25 score = new BM25(1.2, 0.75);
+            System.out.println("Calculating BM25 Score...");
+            List<Term> termList = new ArrayList<>();
+            termList.add(term);
+            score.setVal(score.cal(termList, did));
+            edu.nyu.queryprocessor.entity.Document document = new edu.nyu.queryprocessor.entity.Document(did,score,null, null);
+            Result.addDoc(document);
+        }
         System.out.println("freqBlock: "+freqBlock.size()+freqBlock);
         long idx = docIdBlock.indexOf(nextGEQDId);
         System.out.println(nextGEQDId+" "+idx);
@@ -161,7 +172,7 @@ public class InvertedList {
 //        if (block.get(right) >= did) {
 //            return block.get(right);
 //        }
-//        return -1;
+//        return 3213835+1;
         for (int i = 0; i < block.size(); i++) {
             if (block.get(i) >= did) {
                 return block.get(i);

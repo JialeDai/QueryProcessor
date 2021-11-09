@@ -10,6 +10,6 @@ import static org.junit.jupiter.api.Assertions.*;
 class DAATProcessorTest {
     @Test
     void processTest() throws IOException {
-        System.out.println(new DAATProcessor().process(new Query("aaaaaaaaaaahhhhhhh")));
+        System.out.println(new DAATProcessor().process(new Query("jiale mlgbd")));
     }
 }
